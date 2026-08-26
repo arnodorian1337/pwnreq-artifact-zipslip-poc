@@ -1,0 +1,11 @@
+name: Simple PR control
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "pull_request control reached"
