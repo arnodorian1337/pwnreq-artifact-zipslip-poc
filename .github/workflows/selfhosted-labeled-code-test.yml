@@ -1,0 +1,16 @@
+name: Controlled labeled self-hosted code test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  build:
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'build')
+      && (github.event.action != 'labeled' || github.event.label.name == 'build')
+    runs-on: [self-hosted, pwnreq-persistence]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute project build script
+        run: bash controlled-build.sh
