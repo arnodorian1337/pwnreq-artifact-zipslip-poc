@@ -1,0 +1,12 @@
+name: Controlled self-hosted gate test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  gated:
+    if: contains(github.event.pull_request.labels.*.name, 'allow-selfhosted')
+    runs-on: [self-hosted, pwnreq-persistence]
+    steps:
+      - run: echo "The trusted base workflow requires allow-selfhosted."

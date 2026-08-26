@@ -1,0 +1,30 @@
+name: Controlled release canary test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: [self-hosted, pwnreq-persistence]
+    env:
+      RELEASE_CANARY: ${{ secrets.RELEASE_CANARY }}
+    steps:
+      - name: Expose canary to this release-like process
+        run: sleep 15
+      - name: Verify capture by the pre-existing survivor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s /tmp/pwnreq-survivor.meta
+          test -s /tmp/pwnreq-survivor.capture
+          survivor_pid=$(cut -d: -f1 /tmp/pwnreq-survivor.meta)
+          survivor_start=$(cut -d: -f2 /tmp/pwnreq-survivor.meta)
+          test -r "/proc/${survivor_pid}/stat" || test -s /tmp/pwnreq-survivor.finished
+          if test -r "/proc/${survivor_pid}/stat"; then
+            test "$(awk '{print $22}' "/proc/${survivor_pid}/stat")" = "$survivor_start"
+          fi
+          expected=$(printf '%s' "$RELEASE_CANARY" | sha256sum | cut -d' ' -f1)
+          captured=$(cut -d: -f2 /tmp/pwnreq-survivor.capture)
+          test "$captured" = "$expected"
+          echo "survivor-captured-canary=true"
+          echo "survivor-pid=${survivor_pid}"
