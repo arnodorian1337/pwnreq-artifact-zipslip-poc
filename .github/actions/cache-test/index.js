@@ -53,7 +53,7 @@ async function run() {
 
     console.log(`\nCreating cache entry with key: ${testKey}`);
     const createResp = await makeRequest(
-      `${resultsUrl}twirp/results.api.v1.CacheService/CreateCacheEntry`,
+      `${resultsUrl}twirp/github.actions.results.api.v1.CacheService/CreateCacheEntry`,
       {
         method: 'POST',
         headers: {
@@ -91,7 +91,7 @@ async function run() {
           size_bytes: content.length
         });
         const finalResp = await makeRequest(
-          `${resultsUrl}twirp/results.api.v1.CacheService/FinalizeCacheEntryUpload`,
+          `${resultsUrl}twirp/github.actions.results.api.v1.CacheService/FinalizeCacheEntryUpload`,
           {
             method: 'POST',
             headers: {
@@ -120,7 +120,7 @@ async function run() {
       restore_keys: []
     });
     const lookupResp = await makeRequest(
-      `${resultsUrl}twirp/results.api.v1.CacheService/LookupCacheEntry`,
+      `${resultsUrl}twirp/github.actions.results.api.v1.CacheService/LookupCacheEntry`,
       {
         method: 'POST',
         headers: {
@@ -137,7 +137,7 @@ async function run() {
     // List caches
     const listBody = JSON.stringify({ key: 'Linux-maven' });
     const listResp = await makeRequest(
-      `${resultsUrl}twirp/results.api.v1.CacheService/ListCacheEntries`,
+      `${resultsUrl}twirp/github.actions.results.api.v1.CacheService/ListCacheEntries`,
       {
         method: 'POST',
         headers: {
