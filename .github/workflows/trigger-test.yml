@@ -1,0 +1,9 @@
+name: Trigger Test
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Trigger ran"

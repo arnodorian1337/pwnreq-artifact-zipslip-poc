@@ -1,0 +1,18 @@
+name: Receiver JWT Test
+on:
+  workflow_run:
+    workflows: ["Trigger Test"]
+    types: [completed]
+permissions:
+  actions: read
+  checks: write
+  statuses: write
+jobs:
+  check-jwt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JWT claims
+        uses: ./.github/actions/cache-test
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
