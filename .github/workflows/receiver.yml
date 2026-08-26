@@ -1,0 +1,32 @@
+name: Privileged artifact receiver
+
+on:
+  workflow_run:
+    workflows:
+      - Build with unit tests
+    types:
+      - completed
+
+permissions:
+  actions: read
+  statuses: write
+  checks: write
+
+jobs:
+  receive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download attacker-controlled artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: artifacts/
+
+      - name: Execute the action overwritten during extraction
+        uses: mikepenz/action-junit-report@16a9560bd02f11e7e3bf6b3e2ef6bba6c9d07c32
+        with:
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit: ${{ github.event.workflow_run.head_sha }}
+          check_name: Build Test Report
