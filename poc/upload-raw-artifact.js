@@ -3,13 +3,15 @@
 const fs = require('fs')
 const path = require('path')
 
-if (process.argv.length !== 4) {
+const artifactName = process.argv[2] || process.env.INPUT_ARTIFACT_NAME
+const zipFileArgument = process.argv[3] || process.env.INPUT_ZIP_FILE
+
+if (!artifactName || !zipFileArgument) {
   console.error('usage: upload-raw-artifact.js ARTIFACT_NAME ZIP_FILE')
   process.exit(2)
 }
 
-const artifactName = process.argv[2]
-const zipFile = path.resolve(process.argv[3])
+const zipFile = path.resolve(zipFileArgument)
 
 const artifactEntry = require.resolve('@actions/artifact')
 const artifactRoot = path.resolve(path.dirname(artifactEntry), '..')
