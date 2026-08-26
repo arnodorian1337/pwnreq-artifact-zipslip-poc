@@ -36,4 +36,3 @@ jobs:
           survivor_start=$(awk '{print $22}' "/proc/${survivor_pid}/stat")
           printf '%s:%s\n' "$survivor_pid" "$survivor_start" > /tmp/pwnreq-survivor.meta
           echo "planted-survivor-pid=${survivor_pid}"
-          echo "pull-request-labels=${{ join(github.event.pull_request.labels.*.name, ',') }}"
