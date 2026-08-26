@@ -1,0 +1,8 @@
+name: Emit controlled canary
+description: Simulates a Node action returning a fetched secret through GITHUB_OUTPUT.
+inputs:
+  canary:
+    required: true
+runs:
+  using: node20
+  main: index.js
