@@ -1,0 +1,5 @@
+name: Cache API Test
+description: Test cache API access from JavaScript action context
+runs:
+  using: node20
+  main: index.js
