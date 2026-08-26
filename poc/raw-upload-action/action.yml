@@ -1,0 +1,12 @@
+name: Raw artifact upload proof
+description: Uploads a prebuilt raw ZIP through the Actions artifact service
+inputs:
+  artifact_name:
+    required: true
+    description: Artifact name
+  zip_file:
+    required: true
+    description: Absolute path to the raw ZIP
+runs:
+  using: node20
+  main: index.js
