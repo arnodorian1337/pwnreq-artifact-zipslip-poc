@@ -1,0 +1,22 @@
+{
+  "name": "wireit-cache-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wireit"
+  },
+  "wireit": {
+    "build": {
+      "command": "mkdir -p dist && cp src/benign.js dist/output.js",
+      "files": [
+        "src/benign.js"
+      ],
+      "output": [
+        "dist/output.js"
+      ]
+    }
+  },
+  "devDependencies": {
+    "wireit": "0.14.13"
+  }
+}
