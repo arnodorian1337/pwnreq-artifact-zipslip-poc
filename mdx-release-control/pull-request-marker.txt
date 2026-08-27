@@ -1,1 +1,2 @@
 Controlled same-repository release branch.
+Synchronize after installing the controlled metadata payload.
