@@ -1,0 +1,1 @@
+Controlled pull request used only to characterize GitHub cache permissions.
